@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>🔍 Mini Search Engine</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    margin: 0;
+    background: #f4f6fa;
+    color: #222;
+  }
+  header {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    color: white;
+    padding: 18px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,.1);
+  }
+  header h1 { margin: 0; font-size: 22px; }
+  nav button {
+    background: rgba(255,255,255,.15);
+    color: white;
+    border: 1px solid rgba(255,255,255,.3);
+    padding: 8px 16px;
+    margin-left: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: .2s;
+  }
+  nav button:hover, nav button.active {
+    background: white;
+    color: #4f46e5;
+  }
+
+  main {
+    max-width: 1000px;
+    margin: 24px auto;
+    padding: 0 16px;
+  }
+
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.05);
+  }
+  .card h2 { margin-top: 0; color: #4f46e5; }
+
+  label { display: block; margin: 8px 0 4px; font-weight: 600; font-size: 14px; }
+  input[type="text"], input[type="date"], select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+  }
+  input[type="text"]:focus, input[type="date"]:focus, select:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79,70,229,.15);
+  }
+
+  .checkbox-group { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
+  .checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f3f4f6;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+  }
+  .checkbox-group input { margin: 0; }
+
+  button.primary {
+    background: #4f46e5;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 10px;
+    transition: .2s;
+  }
+  button.primary:hover { background: #4338ca; }
+  button.primary:disabled { opacity: .6; cursor: wait; }
+
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 180px; }
+
+  .result {
+    border-bottom: 1px solid #eee;
+    padding: 14px 0;
+  }
+  .result:last-child { border-bottom: none; }
+  .result h3 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    color: #1e293b;
+  }
+  .result .meta {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 6px;
+  }
+  .result .snippet {
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.5;
+  }
+  .result mark {
+    background: #fde68a;
+    padding: 0 2px;
+    border-radius: 3px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #eef2ff;
+    color: #4f46e5;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 6px;
+    text-transform: uppercase;
+  }
+
+  .pagination {
+    margin-top: 16px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    align-items: center;
+  }
+  .pagination button {
+    padding: 6px 12px;
+    border: 1px solid #d1d5db;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .pagination button:disabled { opacity: .4; cursor: not-allowed; }
+
+  .dym {
+    background: #fff7ed;
+    border-left: 4px solid #f59e0b;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+  .dym a { color: #b45309; font-weight: 600; cursor: pointer; text-decoration: underline; }
+
+  .summary {
+    background: #ecfdf5;
+    border-left: 4px solid #10b981;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-top: 10px;
+    font-size: 14px;
+  }
+  .error {
+    background: #fef2f2;
+    border-left: 4px solid #ef4444;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-top: 10px;
+    font-size: 14px;
+    color: #991b1b;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 4px;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 700px) { .stat-grid { grid-template-columns: 1fr; } }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔍 Mini Search Engine</h1>
+  <nav>
+    <button id="nav-search" class="active" onclick="showView('search')">Search</button>
+    <button id="nav-index"  onclick="showView('index')">Index</button>
+    <button id="nav-stats"  onclick="showView('stats')">Stats</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ═══════ SEARCH VIEW ═══════ -->
+  <section id="view-search">
+    <div class="card">
+      <h2>🔎 Search</h2>
+      <label for="q">Search query (one box for all query types)</label>
+      <input id="q" type="text"
+             placeholder='Examples: information AND retrieval | "search engine" | retrival~ | inform*'
+             onkeydown="if(event.key==='Enter') runSearch(1)"/>
+      <div class="hint">
+        Supports: <b>AND OR NOT ()</b> · <b>"phrase"</b> · <b>fuzzy~</b> · <b>wildcards * ?</b>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <div>
+          <label>From date</label>
+          <input id="from_date" type="date" />
+        </div>
+        <div>
+          <label>To date</label>
+          <input id="to_date" type="date" />
+        </div>
+        <div>
+          <label>File type</label>
+          <select id="file_type">
+            <option value="">— Any —</option>
+            <option value="pdf">PDF</option>
+            <option value="txt">TXT</option>
+            <option value="json">JSON</option>
+            <option value="csv">CSV</option>
+            <option value="xlsx">XLSX</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="primary" onclick="runSearch(1)">Search</button>
+    </div>
+
+    <div id="results-card" class="card hidden">
+      <h2>Results</h2>
+      <div id="dym-container"></div>
+      <div id="results-list"></div>
+      <div id="pagination" class="pagination"></div>
+    </div>
+  </section>
+
+  <!-- ═══════ INDEX VIEW ═══════ -->
+  <section id="view-index" class="hidden">
+    <div class="card">
+      <h2>📂 Build / Rebuild Index</h2>
+
+      <label for="folder_path">Folder path (Windows)</label>
+      <input id="folder_path" type="text"
+             value="F:\tasks\TestFiles"
+             placeholder="F:\tasks\TestFiles" />
+
+      <label style="margin-top:12px;">Choose file formats to index</label>
+      <div class="checkbox-group">
+        <label><input type="checkbox" class="fmt" value="pdf"  checked/> PDF</label>
+        <label><input type="checkbox" class="fmt" value="txt"  checked/> TXT</label>
+        <label><input type="checkbox" class="fmt" value="json" checked/> JSON</label>
+        <label><input type="checkbox" class="fmt" value="csv"  checked/> CSV</label>
+        <label><input type="checkbox" class="fmt" value="xlsx" checked/> XLSX</label>
+      </div>
+
+      <button id="btn-build" class="primary" onclick="buildIndex()">
+        🛠 Build / Rebuild Index
+      </button>
+
+      <div id="index-summary"></div>
+    </div>
+  </section>
+
+  <!-- ═══════ STATS VIEW ═══════ -->
+  <section id="view-stats" class="hidden">
+    <div class="card">
+      <h2>📊 Index Stats</h2>
+      <button class="primary" onclick="loadStats()">🔄 Refresh stats</button>
+      <p id="stats-total" style="font-size:18px; margin-top:14px;"></p>
+
+      <div class="stat-grid">
+        <div>
+          <h3 style="color:#4f46e5;">By file type</h3>
+          <canvas id="chart-type"></canvas>
+        </div>
+        <div>
+          <h3 style="color:#4f46e5;">Top 10 terms</h3>
+          <canvas id="chart-terms"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const API = ""; // same origin
+let currentPage = 1;
+let chartType = null;
+let chartTerms = null;
+
+// ═══════ Navigation ═══════
+function showView(name) {
+  for (const v of ["search","index","stats"]) {
+    document.getElementById("view-"+v).classList.toggle("hidden", v !== name);
+    document.getElementById("nav-"+v).classList.toggle("active", v === name);
+  }
+  if (name === "stats") loadStats();
+}
+
+// ═══════ Build index ═══════
+async function buildIndex() {
+  const folder = document.getElementById("folder_path").value.trim();
+  const formats = [...document.querySelectorAll(".fmt:checked")].map(c => c.value);
+  const summary = document.getElementById("index-summary");
+  const btn = document.getElementById("btn-build");
+
+  if (!folder) { summary.innerHTML = `<div class="error">Folder path is required.</div>`; return; }
+  if (formats.length === 0) { summary.innerHTML = `<div class="error">Pick at least one file format.</div>`; return; }
+
+  btn.disabled = true;
+  summary.innerHTML = `<div class="summary">⏳ Indexing… please wait.</div>`;
+
+  try {
+    const res = await fetch(API + "/index", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folder_path: folder, formats: formats }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      summary.innerHTML = `<div class="error">❌ ${data.detail || "Indexing failed."}</div>`;
+    } else {
+      let breakdown = "";
+      for (const [k, v] of Object.entries(data.by_type)) {
+        breakdown += `<span class="badge">${k}</span> ${v} &nbsp;`;
+      }
+      summary.innerHTML = `
+        <div class="summary">
+          ✅ Indexing complete. <b>${data.total}</b> documents indexed.<br/>
+          ${breakdown || "<i>No documents found.</i>"}
+        </div>`;
+    }
+  } catch (e) {
+    summary.innerHTML = `<div class="error">❌ ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ═══════ Search ═══════
+async function runSearch(page) {
+  currentPage = page || 1;
+  const q = document.getElementById("q").value.trim();
+  if (!q) return;
+
+  const params = new URLSearchParams({
+    q: q,
+    page: currentPage,
+    page_size: 5,
+  });
+  const fd = document.getElementById("from_date").value;
+  const td = document.getElementById("to_date").value;
+  const ft = document.getElementById("file_type").value;
+  if (fd) params.append("from_date", fd);
+  if (td) params.append("to_date", td);
+  if (ft) params.append("file_type", ft);
+
+  const card = document.getElementById("results-card");
+  const list = document.getElementById("results-list");
+  const dym  = document.getElementById("dym-container");
+  const pag  = document.getElementById("pagination");
+
+  card.classList.remove("hidden");
+  list.innerHTML = "<i>Searching…</i>";
+  dym.innerHTML = "";
+  pag.innerHTML = "";
+
+  try {
+    const res = await fetch(API + "/search?" + params.toString());
+    const data = await res.json();
+    if (!res.ok) {
+      list.innerHTML = `<div class="error">❌ ${data.detail || "Search failed."}</div>`;
+      return;
+    }
+
+    if (data.total === 0) {
+      let dymHtml = "";
+      if (data.did_you_mean) {
+        dymHtml = `<div class="dym">Did you mean: <a onclick="useSuggestion('${escapeJs(data.did_you_mean)}')">${escapeHtml(data.did_you_mean)}</a> ?</div>`;
+      }
+      dym.innerHTML = dymHtml;
+      list.innerHTML = `<p><i>No results found.</i></p>`;
+      return;
+    }
+
+    list.innerHTML = data.results.map(r => `
+      <div class="result">
+        <h3>${escapeHtml(r.filename || "(no name)")}</h3>
+        <div class="meta">
+          <span class="badge">${escapeHtml(r.file_type || "")}</span>
+          📅 ${escapeHtml((r.mod_date || "").substring(0,19).replace("T"," "))}
+          &nbsp;·&nbsp; score: ${r.score ? r.score.toFixed(3) : "—"}
+        </div>
+        <div class="snippet">${r.highlight || ""}</div>
+      </div>
+    `).join("");
+
+    const totalPages = Math.max(1, Math.ceil(data.total / 5));
+    pag.innerHTML = `
+      <button onclick="runSearch(${currentPage-1})" ${currentPage<=1?"disabled":""}>‹ Prev</button>
+      <span>Page ${currentPage} of ${totalPages} (${data.total} results)</span>
+      <button onclick="runSearch(${currentPage+1})" ${currentPage>=totalPages?"disabled":""}>Next ›</button>
+    `;
+  } catch (e) {
+    list.innerHTML = `<div class="error">❌ ${e.message}</div>`;
+  }
+}
+
+function useSuggestion(s) {
+  document.getElementById("q").value = s;
+  runSearch(1);
+}
+
+// ═══════ Stats ═══════
+async function loadStats() {
+  const totalEl = document.getElementById("stats-total");
+  totalEl.innerText = "Loading…";
+  try {
+    const res = await fetch(API + "/stats");
+    const data = await res.json();
+    totalEl.innerHTML = `📚 Total documents: <b>${data.total_documents}</b>`;
+
+    const typeLabels = Object.keys(data.by_type || {});
+    const typeData   = Object.values(data.by_type || {});
+    if (chartType) chartType.destroy();
+    chartType = new Chart(document.getElementById("chart-type"), {
+      type: "doughnut",
+      data: {
+        labels: typeLabels,
+        datasets: [{
+          data: typeData,
+          backgroundColor: ["#4f46e5","#10b981","#f59e0b","#ef4444","#06b6d4","#8b5cf6"],
+        }],
+      },
+    });
+
+    const termLabels = (data.top_terms || []).map(t => t.term);
+    const termCounts = (data.top_terms || []).map(t => t.count);
+    if (chartTerms) chartTerms.destroy();
+    chartTerms = new Chart(document.getElementById("chart-terms"), {
+      type: "bar",
+      data: {
+        labels: termLabels,
+        datasets: [{
+          label: "Frequency",
+          data: termCounts,
+          backgroundColor: "#6366f1",
+        }],
+      },
+      options: {
+        indexAxis: "y",
+        plugins: { legend: { display: false } },
+      },
+    });
+  } catch (e) {
+    totalEl.innerHTML = `<div class="error">❌ ${e.message}</div>`;
+  }
+}
+
+// ═══════ Helpers ═══════
+function escapeHtml(s) {
+  return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function escapeJs(s) {
+  return (s||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+}
+</script>
+</body>
+</html>

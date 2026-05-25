@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+elasticsearch
+pymupdf
+pandas
+openpyxl
+python-multipart
